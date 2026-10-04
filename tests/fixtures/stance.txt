@@ -1,0 +1,22 @@
+Forwarded from Special Premium Group
+
+Company - Stance Health
+Role - AI Engineering Intern
+Batch - 2025/2026/2027
+Stipend - ₹35,000/month
+Location - Bengaluru
+
+Job Description:
+- Build backend APIs and services using Python, FastAPI, and Node.js.
+- Integrate AI/LLM systems including agents and RAG pipelines.
+- Work with structured outputs and prompt engineering.
+- Work with MongoDB, real-time pipelines, and aggregation.
+- Build internal tools for clinical assessments and patient data workflows.
+
+Requirements:
+- Strong Python fundamentals with hands-on project experience.
+- Familiarity with REST APIs and server-side frameworks.
+- Knowledge of at least one database.
+
+How to Apply:
+Send resume to careers@stance.health

@@ -1,0 +1,25 @@
+Referral Alert
+
+Company - RoadVision AI
+Role - Software Development Engineer Intern
+Batch - 2025/2026/2027
+Stipend - ₹25,000/month (7 LPA PPO)
+Location - New Delhi
+
+Job Description:
+- Build and scale backend APIs using Python, Flask, or FastAPI.
+- Develop responsive React.js dashboards for data visualization.
+- Integrate video analytics and computer vision pipelines with backend systems.
+- Work with GIS datasets, geoprocessing, and map-based workflows.
+- Deploy, monitor, and optimize applications on AWS/GCP.
+- Use AI-assisted development tools such as Cursor, Lovable, and GitHub Copilot.
+
+Requirements:
+- Strong programming fundamentals.
+- Good understanding of Python, JavaScript, APIs, and databases.
+- Hands-on experience through projects, internships, or coursework.
+- Interest in AI, Computer Vision, GIS, and cloud technologies.
+
+How to Apply:
+Send CV to hr@roadvision.ai
+https://forms.gle/roadvisionExample

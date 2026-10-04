@@ -1,0 +1,43 @@
+# Copy to profile.yaml and fill YOUR details.
+#   cp config/profile.example.yaml config/profile.yaml
+# Never commit profile.yaml — it is gitignored.
+
+full_name: Your Name
+email: you@gmail.com
+phone: "+91 0000000000"
+batch: "2027"
+college: "Your college, degree, years, CGPA"
+resume_path: "/absolute/path/to/your_resume.pdf"
+resume_drive: "https://drive.google.com/file/d/YOUR_FILE_ID/view?usp=sharing"
+portfolio: "https://your-portfolio.example"
+linkedin: "https://linkedin.com/in/your-handle"
+github: "https://github.com/your-handle"
+skills:
+  - React and Next.js frontend
+  - Node.js, Express, TypeScript
+  - Python and FastAPI
+proof_points:
+  - "Project or internship: what you shipped and a real number (before → after)."
+preferred_locations:
+  - Remote
+  - India
+city: YourCity
+state: YourState
+country: India
+degree: B.Tech
+branch: Computer Science and Engineering
+cgpa: "8.0"
+tenth: "90"
+twelfth: "90"
+graduation_year: "2027"
+current_company: ""
+current_role: ""
+available: Immediate
+notice_period: Immediate
+experience_years: "0"
+current_ctc: "0"
+current_stipend: ""
+languages: English, Hindi
+notes: >
+  One or two sentences about you for email closings. Only list skills and
+  proof_points you actually have — the bot will not invent extras.

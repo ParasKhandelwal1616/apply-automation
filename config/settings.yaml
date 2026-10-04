@@ -1,0 +1,177 @@
+channel_title: "SDE Premium Group"
+poll_interval_seconds: 90
+dry_run_default: true
+extract_limit: 10
+min_text_chars: 80
+screenshot_dir: data/screenshots
+database_path: data/applications.db
+chrome_profile_dir: data/chrome-profile
+auto_send_email: true
+auto_submit_forms: true
+auto_submit_careers: true
+use_gemini: false
+telegram_start_urls:
+  - https://web.telegram.org/k/
+  - https://web.telegram.org/a/
+
+allow_titles:
+  - full stack
+  - fullstack
+  - full-stack
+  - sde
+  - swe intern
+  - software development engineer
+  - software engineer intern
+  - software engineering intern
+  - software engineer trainee
+  - software developer
+  - software intern
+  - backend
+  - frontend
+  - mern
+  - mean
+  - node.js
+  - nodejs
+  - react
+  - next.js
+  - nextjs
+  - typescript
+  - python intern
+  - python developer
+  - fastapi
+  - genai
+  - gen ai
+  - ai automation
+  - devops intern
+  - cloud engineer intern
+  - cloud intern
+  - trainee
+  - graduate engineer trainee
+  - junior software
+  - junior developer
+  - react native
+  - software developer intern
+  - software development intern
+  - web developer
+  - web intern
+  - application developer
+  - product engineer
+  - founding engineer
+  - member of technical
+  - technical intern
+  - engineering intern
+  - amts
+  - cloud & devops
+  - cloud and devops
+  - devops intern
+
+deny_titles:
+  - "angular"
+  - ".net"
+  - "dotnet"
+  - "swift"
+  - "kotlin"
+  - "android native"
+  - "ios native"
+  - "embedded"
+  - "manual qa"
+  - "testing-only"
+  - "sre"
+  - "research intern"
+  - "site reliability"
+  - "flutter"
+  - "php intern"
+  - "laravel"
+  - "wordpress"
+  - "spring boot"
+  - "springboot"
+  - "core java"
+  - "java intern"
+  - "golang"
+  - "go developer"
+  - "rust developer"
+  - "salesforce admin"
+  - "salesforce developer"
+  - "unity"
+  - "unreal engine"
+  - "vlsi"
+  - "firmware"
+
+profile_stack_signals:
+  - react
+  - next.js
+  - nextjs
+  - node
+  - nodejs
+  - node.js
+  - express
+  - typescript
+  - javascript
+  - python
+  - fastapi
+  - mongodb
+  - mongo
+  - redis
+  - mysql
+  - docker
+  - aws
+  - nginx
+  - gemini
+  - groq
+  - rag
+  - llm
+  - genai
+  - gen ai
+  - mern
+  - rest api
+  - postgres
+  - tailwind
+
+ai_engineer_app_signals:
+  - api
+  - fastapi
+  - node
+  - react
+  - rag
+  - agent
+  - fullstack
+  - full stack
+  - backend
+  - product
+  - llm
+
+personal_email_domains:
+  - gmail.com
+  - yahoo.com
+  - yahoo.in
+  - outlook.com
+  - hotmail.com
+  - icloud.com
+  - proton.me
+  - protonmail.com
+
+famous_brands:
+  - microsoft
+  - google
+  - amazon
+  - meta
+  - facebook
+  - apple
+  - netflix
+  - tesla
+  - nvidia
+  - oracle
+  - salesforce
+  - adobe
+  - uber
+
+careers_url_markers:
+  - greenhouse.io
+  - lever.co
+  - myworkday.com
+  - workday.com
+  - careers.
+  - jobs.
+  - linkedin.com/jobs
+  - wellfound.com
+  - lever.co
