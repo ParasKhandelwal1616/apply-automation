@@ -1,19 +1,67 @@
-.env
-.venv/
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
+*$py.class
+*.bak
+*.bak_*
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# IDE / Editor configuration
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Testing and coverage
 .pytest_cache/
+.coverage
+htmlcov/
+
+# Playwright & automation temp data
 .playwright-mcp/
-config/profile.yaml
-config/email_template.md
-data/*.db
-data/*.xlsx
-data/*.csv
-data/*.pdf
-data/screenshots/
 data/chrome-profile/
 data/pw-browsers/
-data/last_opened_url.txt
+data/screenshots/
+
+# Personal Profile & Configuration
+config/profile.yaml*
+config/profile_facts.yaml
+config/email_template.md
+.env
+
+# Backups & scratch folders
+backups*/
+srcapply_botlinkedin/
+PROJECTS_SUMMARY.md
+
+# Dynamic application & lead tracking data
+data/*.db*
+data/*.xlsx
+data/*.csv*
+data/*.pdf*
+data/*.log
+data/*.err.log
+data/*.txt
+data/*.png
+data/*.py
+
+# Private LinkedIn message dumps and cached contacts
+data/*_drafts_*.json
+data/*_threads_*.json
+data/linkedin_daily_counts.json
+data/followup_jobs.json
+data/followup_overrides.json
+
+# Packaging
 *.egg-info/
 dist/
 build/
+
+# Ignore all runtime JSON files in data/ except examples
+data/*.json
+!data/*.example.json

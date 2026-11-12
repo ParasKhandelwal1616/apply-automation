@@ -1,3 +1,4 @@
+from apply_bot.config import Profile
 from apply_bot.filter.relevance import is_relevant
 from apply_bot.models import JobPost
 
@@ -118,12 +119,23 @@ def test_flutter_only_skipped(settings):
 
 def test_spring_boot_only_skipped(settings):
     post = _post(
-        role="Java Developer Intern",
-        raw_text="Java Developer Intern Spring Boot batch 2027",
+        role="Spring Boot Developer Intern",
+        raw_text="Spring Boot Developer Intern Java Spring Boot batch 2027",
     )
     ok, reason = is_relevant(post, settings, already_applied=False)
     assert ok is False
     assert reason == "deny_title"
+
+
+def test_java_developer_title_skipped(settings):
+    """Java-only titles stay out; SDE titles that merely mention Java in the JD stay in."""
+    post = _post(
+        role="Java Developer Intern",
+        raw_text="Java Developer Intern Spring Boot batch 2027",
+    )
+    ok, reason = is_relevant(post, settings, already_applied=False)
+    # Title is not a protected SDE/Python role; no profile stack match required to skip.
+    assert ok is False
 
 
 def test_founding_engineer_node_is_relevant(settings):
@@ -171,6 +183,37 @@ def test_sdet_skipped(settings):
     assert ok is False
 
 
+def _fit_profile() -> Profile:
+    return Profile(full_name="Sumanth", batch="2026")
+
+
+def test_remote_role_that_fits_is_relevant(settings):
+    post = _post(
+        role="Backend Engineer",
+        location="Remote",
+        stipend="50000/month",
+        raw_text="Backend Engineer Remote Python FastAPI stipend 50000/month batch 2026",
+        batch_raw="2026",
+        batch_includes_2027=False,
+    )
+    ok, reason = is_relevant(post, settings, already_applied=False, profile=_fit_profile())
+    assert ok is True, reason
+
+
+def test_pay_at_or_below_40000_skipped(settings):
+    post = _post(
+        role="Backend Engineer",
+        location="Bengaluru",
+        stipend="30000/month",
+        raw_text="Backend Engineer Bengaluru Python FastAPI stipend 30000/month full time batch 2026",
+        batch_raw="2026",
+        batch_includes_2027=False,
+    )
+    ok, reason = is_relevant(post, settings, already_applied=False, profile=_fit_profile())
+    assert ok is False
+    assert reason == "monthly_below_min"
+
+
 def test_mean_stack_not_blocked_as_angular_only(settings):
     post = _post(
         role="MEAN Stack Intern",
@@ -178,3 +221,117 @@ def test_mean_stack_not_blocked_as_angular_only(settings):
     )
     ok, reason = is_relevant(post, settings, already_applied=False)
     assert ok is True
+
+
+def test_software_engineer_not_denied_for_body_kotlin(settings):
+    post = _post(
+        role="Associate Software Engineer",
+        raw_text=(
+            "Associate Software Engineer batch 2025/2026/2027 Bengaluru "
+            "Python FastAPI. Exposure to FastAPI, React, or Kotlin. "
+            "Salary 45000/month full time"
+        ),
+        batch_raw="2025/2026/2027",
+        location="Bengaluru",
+        stipend="45000/month",
+    )
+    ok, reason = is_relevant(post, settings, already_applied=False, profile=_fit_profile())
+    assert ok is True, reason
+    assert reason != "deny_title"
+
+
+def test_opportunity_word_does_not_trigger_unity_deny(settings):
+    post = _post(
+        role="Junior Frontend Developer",
+        raw_text=(
+            "Junior Frontend Developer batch 2026 Bangalore. "
+            "Opportunity: join a growing startup. React TypeScript. "
+            "Salary 50000/month full time"
+        ),
+        batch_raw="2026",
+        location="Bengaluru",
+        stipend="50000/month",
+    )
+    ok, reason = is_relevant(post, settings, already_applied=False, profile=_fit_profile())
+    assert ok is True, reason
+
+
+def test_taleo_net_url_does_not_deny_software_engineer(settings):
+    post = _post(
+        role="Software Engineer",
+        raw_text=(
+            "Software Engineer batch 2026 PAN India. "
+            "Apply https://uhg.taleo.net/careersection/job apply. Python."
+        ),
+        batch_raw="2026",
+        location="PAN India",
+    )
+    ok, reason = is_relevant(post, settings, already_applied=False, profile=_fit_profile())
+    assert ok is True, reason
+    assert reason != "deny_title"
+
+
+def test_dotnet_title_still_denied(settings):
+    post = _post(
+        role="Junior .NET Full Stack Developer",
+        raw_text="Junior .NET Full Stack Developer batch 2026 C# ASP.NET",
+    )
+    ok, reason = is_relevant(post, settings, already_applied=False)
+    assert ok is False
+    assert reason == "deny_title"
+
+
+def test_product_manager_still_denied(settings):
+    post = _post(
+        role="Product Manager",
+        raw_text="Product Manager batch 2026 Bengaluru",
+    )
+    ok, reason = is_relevant(post, settings, already_applied=False)
+    assert ok is False
+    assert reason == "deny_title"
+
+
+def test_python_ai_engineer_agent_is_relevant(settings):
+    post = _post(
+        role="Python AI Engineer - Autonomous Agent",
+        raw_text=(
+            "Python AI Engineer Autonomous Agent batch 2026 Remote India "
+            "Salary 50000/month. Strong Python REST APIs FastAPI LLM agents."
+        ),
+        batch_raw="2026",
+        location="Remote",
+        stipend="50000/month",
+    )
+    ok, reason = is_relevant(post, settings, already_applied=False, profile=_fit_profile())
+    assert ok is True, reason
+
+
+def test_barclays_ai_engineer_short_post_is_relevant(settings):
+    post = _post(
+        role="AI Engineer",
+        company="Barclays",
+        raw_text=(
+            "Company - Barclays Role - AI Engineer Batch - 2023/2024/2025/2026 "
+            "CTC - Competitive Location - PAN India"
+        ),
+        batch_raw="2023/2024/2025/2026",
+        location="PAN India",
+    )
+    ok, reason = is_relevant(post, settings, already_applied=False, profile=_fit_profile())
+    assert ok is True, reason
+
+
+def test_sde1_frontend_gurgaon_allowed_for_fit(settings):
+    post = _post(
+        role="SDE 1 (Frontend)",
+        company="Care.Fi",
+        raw_text=(
+            "Care.Fi SDE 1 Frontend batch 2024/2025/2026 Salary 50000-80000/month "
+            "Location Gurgaon React TypeScript Ionic"
+        ),
+        batch_raw="2024/2025/2026",
+        location="Gurgaon",
+        stipend="50000/month",
+    )
+    ok, reason = is_relevant(post, settings, already_applied=False, profile=_fit_profile())
+    assert ok is True, reason

@@ -13,6 +13,15 @@ def test_ats_walls_are_stuck():
     assert stuck_reason(url="https://internshala.com/internship/x") == "stuck_ats"
     assert stuck_reason(url="https://job-boards.greenhouse.io/x") == "stuck_ats"
     assert stuck_reason(company="Infobip", url="https://docs.google.com/forms/d/e/x") == "stuck_picker"
+    assert stuck_reason(
+        url="https://jobs.lever.co/x", reason="extra_step"
+    ) == "extra_step"
+    assert (
+        stuck_reason(
+            url="https://docs.google.com/forms/d/e/abc", reason="extra_step"
+        )
+        is None
+    )
 
 
 def test_customer_success_not_profile(settings):

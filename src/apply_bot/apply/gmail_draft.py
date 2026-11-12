@@ -97,12 +97,13 @@ def create_gmail_draft(
     body.fill(draft.body)
 
     resume = Path(profile.resume_path).expanduser() if profile.resume_path else None
-    if resume and resume.exists():
-        file_input = page.locator('input[type="file"]')
-        if file_input.count():
-            file_input.first.set_input_files(str(resume))
+    if not resume or not resume.exists():
+        raise RuntimeError(f"resume_missing: {profile.resume_path}")
+    if not attach_resume_verified(page, resume):
+        raise RuntimeError("resume_not_attached: Gmail did not show the attachment; not sending")
+    print(f"    resume attached: {resume.name}")
 
-    page.wait_for_timeout(2000)
+    page.wait_for_timeout(1000)
     if not send:
         page.keyboard.press("Control+s")
         page.wait_for_timeout(1500)
@@ -120,3 +121,58 @@ def create_gmail_draft(
     if "message sent" in page_text or "undo" in page_text:
         return True
     return True
+
+
+UPLOADING_WORDS = ("uploading", "attaching")
+
+
+def attachment_ready(compose_text: str, filename: str) -> bool:
+    """True once the compose window shows the file chip and no upload is in progress."""
+    text = (compose_text or "").lower()
+    return filename.lower() in text and not any(w in text for w in UPLOADING_WORDS)
+
+
+def _compose_scope(page):
+    try:
+        dialogs = page.locator('div[role="dialog"]').filter(has=page.locator('input[name="subjectbox"]'))
+        if dialogs.count():
+            return dialogs.last
+    except Exception:
+        pass
+    return page
+
+
+def attach_resume_verified(page, resume: Path, timeout_ms: int = 45000) -> bool:
+    """Attach via Gmail's paperclip (file chooser), falling back to the hidden file input,
+    then wait until the attachment chip with the file name appears."""
+    scope = _compose_scope(page)
+    started = False
+    try:
+        btn = scope.locator('[aria-label^="Attach files"], [data-tooltip^="Attach files"]')
+        if btn.count():
+            with page.expect_file_chooser(timeout=6000) as chooser:
+                btn.first.click()
+            chooser.value.set_files(str(resume))
+            started = True
+    except Exception as exc:
+        print(f"    attach via paperclip failed: {exc}")
+    if not started:
+        try:
+            inputs = page.locator('input[type="file"]')
+            if inputs.count():
+                inputs.last.set_input_files(str(resume))
+                started = True
+        except Exception as exc:
+            print(f"    attach via file input failed: {exc}")
+    if not started:
+        return False
+    deadline = time.time() + timeout_ms / 1000
+    while time.time() < deadline:
+        try:
+            text = scope.inner_text()
+        except Exception:
+            text = ""
+        if attachment_ready(text, resume.name):
+            return True
+        page.wait_for_timeout(1000)
+    return False

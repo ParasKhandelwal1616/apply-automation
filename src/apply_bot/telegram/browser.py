@@ -294,12 +294,35 @@ class TelegramSession:
             raise RuntimeError(f"Channel not found in sidebar or search: {title}")
 
     def _click_channel(self, page: Page) -> None:
-        title = self.settings.channel_title
         page.wait_for_timeout(1500)
-        # Always hit the sidebar row. Header-already-visible used to skip this
-        # and leave Telegram on the last-read message (27 Aug).
-        if self._click_sidebar_chat(page, title):
-            return
-        if self._header_shows_channel(page, title):
-            return
-        self._search_channel(page, title)
+        last_exc: Exception | None = None
+        for title in title_variants(self.settings.channel_title):
+            # Always hit the sidebar row. Header-already-visible used to skip this
+            # and leave Telegram on the last-read message (27 Aug).
+            if self._click_sidebar_chat(page, title):
+                return
+            if self._header_shows_channel(page, title):
+                return
+            try:
+                self._search_channel(page, title)
+                return
+            except RuntimeError as exc:
+                last_exc = exc
+        raise last_exc or RuntimeError(f"Channel not found: {self.settings.channel_title}")
+
+
+def title_variants(title: str) -> list[str]:
+    """Exact title first, then O/0 swaps ('2.0' vs '2.O'), then the title without its version suffix."""
+    import re as _re
+
+    out: list[str] = []
+    for cand in (
+        title,
+        _re.sub(r"(?<=\d\.)0\b", "O", title),
+        _re.sub(r"(?<=\d\.)O\b", "0", title),
+        _re.sub(r"\s+\d+(?:\.[0-9oO]+)?\s*$", "", title),
+    ):
+        cand = cand.strip()
+        if cand and cand not in out:
+            out.append(cand)
+    return out

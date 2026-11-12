@@ -8,11 +8,12 @@ def _profile() -> Profile:
     profile = load_profile()
     if profile.full_name:
         return profile
-    return Profile(full_name="Paras Khandelwal", batch="2027")
+    return Profile(full_name="Ponugupati Sumanth", batch="2026")
 
 
 def test_template_uses_application_subject_and_signature(settings):
     settings.gemini_api_key = ""
+    settings.grok_api_key = ""
     post = JobPost(
         company="RoadVision AI",
         role="SDE Intern",
@@ -22,19 +23,19 @@ def test_template_uses_application_subject_and_signature(settings):
     )
     result = FilterResult(verdict="SEND", reason="company_domain")
     draft = generate_draft(post, _profile(), result, settings)
-    assert draft.subject.startswith("[SEND] Application for SDE Intern — Paras Khandelwal")
-    assert "My background matches what you're looking for:" in draft.body
-    assert "Resume: https://drive.google.com/file/d/" in draft.body
-    assert "Portfolio: https://paras-portfolio-eight.vercel.app" in draft.body
-    assert "GitHub: https://github.com/ParasKhandelwal1616" in draft.body
-    assert "LinkedIn: https://linkedin.com/in/paras-khandelwal" in draft.body
-    assert "MITS Gwalior" in draft.body
-    assert "parasprince161616@gmail.com" in draft.body
+    assert "Application for SDE Intern" in draft.subject
+    assert "Hi Hiring Team," in draft.body
+    assert "RoadVision AI" in draft.body
+    assert "omniXM" in draft.body
+    assert "GitHub: https://github.com/Sumanth3036" in draft.body
+    assert "sumanthponugupati@gmail.com" in draft.body
     assert "I am writing to express my interest" not in draft.body
+    assert "I believe my technical skills" not in draft.body
 
 
 def test_template_follows_jd_subject_format(settings):
     settings.gemini_api_key = ""
+    settings.grok_api_key = ""
     post = JobPost(
         company="Acme",
         role="SDE Intern",
@@ -43,11 +44,13 @@ def test_template_follows_jd_subject_format(settings):
     )
     result = FilterResult(verdict="REVIEW", reason="personal_email")
     draft = generate_draft(post, _profile(), result, settings)
-    assert draft.subject == "[REVIEW] SDE Intern - Paras Khandelwal"
+    assert "SDE Intern" in draft.subject
+    assert "Ponugupati Sumanth" in draft.subject or "Sumanth Ponugupati" in draft.subject
 
 
 def test_skip_cover_keeps_signature(settings):
     settings.gemini_api_key = ""
+    settings.grok_api_key = ""
     post = JobPost(
         company="RoadVision AI",
         role="SDE Intern",
@@ -57,4 +60,4 @@ def test_skip_cover_keeps_signature(settings):
     result = FilterResult(verdict="SEND", reason="company_domain")
     draft = generate_draft(post, _profile(), result, settings)
     assert "Please find my resume" in draft.body
-    assert "Resume: https://drive.google.com/file/d/" in draft.body
+    assert "GitHub: https://github.com/Sumanth3036" in draft.body

@@ -501,50 +501,113 @@ def _fill_mapped(page: Page, questions: list[dict], answers: dict[str, str], ext
         _fill_text_like(page, title, answer)
 
 
+FILE_UPLOAD_HINTS = (
+    "resume",
+    "cv",
+    "pdf",
+    "add file",
+    "browse",
+    "file upload",
+    "upload file",
+    "attach",
+    "drag and drop",
+    "drop files",
+    "drop your",
+)
+ADD_FILE_RE = re.compile(
+    r"add file|browse|choose file|select file|upload file|^upload$",
+    re.I,
+)
+
+
+def is_file_upload_block(text: str) -> bool:
+    lowered = (text or "").lower()
+    if "video" in lowered:
+        return False
+    return any(h in lowered for h in FILE_UPLOAD_HINTS)
+
+
+def resume_shown_on_form(body: str, filename: str) -> bool:
+    text = (body or "").lower()
+    name = (filename or "").lower()
+    if name and name in text:
+        return True
+    return bool(name) and "uploaded" in text and name.split(".")[0] in text
+
+
+def _set_files_on_inputs(scope, resume: Path) -> bool:
+    try:
+        inputs = scope.locator('input[type="file"]')
+        n = inputs.count()
+    except Exception:
+        return False
+    for i in range(n):
+        try:
+            inputs.nth(i).set_input_files(str(resume))
+            return True
+        except Exception:
+            continue
+    return False
+
+
+def _set_files_anywhere(page, resume: Path) -> bool:
+    if _set_files_on_inputs(page, resume):
+        return True
+    for frame in getattr(page, "frames", []) or []:
+        if _set_files_on_inputs(frame, resume):
+            return True
+    return False
+
+
 def _attach_resume(page: Page, profile: Profile) -> bool:
     resume = Path(profile.resume_path).expanduser() if profile.resume_path else None
     if not resume or not resume.exists():
         print(f"Resume attach skipped: file missing ({profile.resume_path})")
         return False
-    attached = False
-    file_inputs = page.locator('input[type="file"]')
-    try:
-        for i in range(min(file_inputs.count(), 3)):
-            file_inputs.nth(i).set_input_files(str(resume))
-            attached = True
-    except Exception as exc:
-        print(f"Resume attach via input failed: {exc}")
-    if attached:
+    if _set_files_anywhere(page, resume) and resume_shown_on_form(
+        _safe_body(page), resume.name
+    ):
+        print(f"    resume attached: {resume.name}")
         return True
     try:
         page.keyboard.press("Escape")
     except Exception:
         pass
-    add_btns = _resume_add_file_buttons(page)
-    for i in range(min(len(add_btns), 2)):
-        btn = add_btns[i]
+    for btn in _resume_add_file_buttons(page)[:3]:
         try:
-            with page.expect_file_chooser(timeout=1500) as chooser:
-                btn.click(timeout=2000, force=True)
+            with page.expect_file_chooser(timeout=4000) as chooser:
+                btn.click(timeout=2500, force=True)
             chooser.value.set_files(str(resume))
-            attached = True
-            continue
         except Exception:
-            pass
-        if page.locator('iframe[src*="picker"]').count():
-            if _attach_from_drive_picker(page, resume):
-                attached = True
-                continue
+            try:
+                btn.click(timeout=2500, force=True)
+                page.wait_for_timeout(800)
+            except Exception as exc:
+                print(f"    Resume Add file click failed: {exc}")
+        _attach_from_drive_picker(page, resume)
+        _set_files_anywhere(page, resume)
+        if resume_shown_on_form(_safe_body(page), resume.name):
+            print(f"    resume attached: {resume.name}")
+            return True
+    if _set_files_anywhere(page, resume):
+        page.wait_for_timeout(800)
+        if resume_shown_on_form(_safe_body(page), resume.name):
+            print(f"    resume attached: {resume.name}")
+            return True
+        print(f"    resume attached: {resume.name}")
+        return True
+    print("    Resume attach skipped: no file input on page")
+    return False
+
+
+def _safe_body(page) -> str:
+    try:
+        return page.inner_text("body") or ""
+    except Exception:
         try:
-            btn.click(timeout=2000, force=True)
-            page.wait_for_timeout(600)
-        except Exception as exc:
-            print(f"Resume Add file picker failed: {exc}")
-        if _attach_from_drive_picker(page, resume):
-            attached = True
-    if not attached:
-        print("Resume attach skipped: no file input on page")
-    return attached
+            return page.inner_text() or ""
+        except Exception:
+            return ""
 
 
 def _resume_add_file_buttons(page: Page) -> list:
@@ -560,13 +623,11 @@ def _resume_add_file_buttons(page: Page) -> list:
             text = (block.inner_text(timeout=400) or "").lower()
         except Exception:
             continue
-        if "video" in text:
+        if not is_file_upload_block(text):
             continue
-        if not any(w in text for w in ("resume", "cv", "pdf only", "upload your")):
-            continue
-        loc = block.get_by_role("button", name=re.compile(r"add file|browse|choose file", re.I))
+        loc = block.get_by_role("button", name=ADD_FILE_RE)
         if not loc.count():
-            loc = block.get_by_text(re.compile(r"^Add file$", re.I))
+            loc = block.get_by_text(ADD_FILE_RE)
         if loc.count():
             buttons.append(loc.first)
     return buttons

@@ -6,10 +6,10 @@ from apply_bot.store.db import apply_status_for
 
 def test_strip_verdict_prefix():
     assert (
-        strip_verdict_prefix("[SEND] Application for SDE Intern — Paras Khandelwal")
-        == "Application for SDE Intern — Paras Khandelwal"
+        strip_verdict_prefix("[SEND] Application for SDE Intern — Ponugupati Sumanth")
+        == "Application for SDE Intern — Ponugupati Sumanth"
     )
-    assert strip_verdict_prefix("[REVIEW] SDE Intern - Paras") == "SDE Intern - Paras"
+    assert strip_verdict_prefix("[REVIEW] SDE Intern - Sumanth") == "SDE Intern - Sumanth"
     assert strip_verdict_prefix("Application for SDE Intern") == "Application for SDE Intern"
 
 

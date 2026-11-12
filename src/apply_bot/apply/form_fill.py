@@ -67,7 +67,8 @@ RULES: list[tuple[tuple[str, ...], str]] = (
     ),
     (("languages known",), "languages"),
     (("applying for", "position applied", "role applied", "job role"), "role"),
-    (("expected stipend", "expected ctc", "salary expectation", "stipend expectation"), "stipend"),
+    (("expected stipend", "stipend expectation"), "stipend"),
+    (("expected ctc", "salary expectation", "expected salary"), "expected_lpa"),
     (("preferred location", "preferred city"), "preferred_location"),
     (
         (
@@ -110,7 +111,7 @@ def fact_bank(profile: Profile, post: JobPost, draft: ApplicationDraft) -> dict[
         if job_stipend and job_stipend.isdigit() and 15000 <= int(job_stipend) <= 80000
         else "25000-40000/month"
     )
-    current_ctc = profile.current_ctc or "3 LPA (₹25,000/month internship)"
+    current_ctc = profile.current_ctc or "0"  # was: "3 LPA (₹25,000/month internship)"
     return {
         "name": profile.full_name,
         "email": profile.email,
@@ -138,42 +139,41 @@ def fact_bank(profile: Profile, post: JobPost, draft: ApplicationDraft) -> dict[
         "company": post.company or "",
         "stipend": expected_stipend,
         "expected_stipend": expected_stipend,
-        "expected_lpa": "3-6 LPA",
+        "expected_lpa": (profile.expected_ctc or "8 LPA"),
         "preferred_location": ", ".join(profile.preferred_locations) or profile.city,
         "skills": ", ".join(profile.skills),
         "why": why,
-        "relocate": "Yes",
+        "relocate": "Prefer Bengaluru, Hyderabad, or Chennai",
         "remote": "Yes",
         "join_date": nearest_monday().strftime("%d/%m/%Y"),
         "join_date_iso": nearest_monday().isoformat(),
         "duration": "6 months",
         "source": "Telegram referral / SDE Premium Group",
         "premium_group": "SDE Premium Group",
-        "three_words": "Full-stack, curious, builder",
+        "three_words": "Backend, AI, builder",
         "python_rate": "4",
         "sql_rate": "3",
         "office_yes": "Yes",
-        "currently_studying": "Yes",
+        "currently_studying": "No",
         "bond": "No",
         "wfh": "Yes",
-        "graduated": "No",
+        "graduated": "Yes",
         "blogs": "No",
         "tenth": profile.tenth,
         "twelfth": profile.twelfth,
         "leetcode": "NA",
         "job_id": _job_id_from_post(post),
-        "other_stack": ", ".join(profile.skills[:4]) or "TypeScript, Python",
+        "other_stack": ", ".join(profile.skills[:4]) or "Python, FastAPI, React, Node.js",
         "internship_exp": (
-            f"Full-time: none. Internship: {profile.current_role} at "
-            f"{profile.current_company} (~{profile.experience_years or '1'} year); "
-            "Univ Technologies intern."
+            f"Full-time: none (2026 graduate). Current: {profile.current_role} at {profile.current_company}. "
+            "Internships: Research Intern (LLM & Data Agents) at IIT Kharagpur; Software & ML Engineer Intern at LogiXair (Honeywell affiliation)."
         ),
         "current_ctc": current_ctc,
         "best_project": next(
             (p for p in profile.proof_points if p),
             "",
         ),
-        "two_techs": "React/Next.js and Node.js/TypeScript",
+        "two_techs": "Python/FastAPI (backend and AI/ML) and React/Node.js",
         "primary_language": "Python",
         "autonomy": "4",
         "hpc": "0",
@@ -342,7 +342,7 @@ def answer_for_question(question: str, facts: dict[str, str]) -> str:
     if "i agree" in q or "terms" in q or "privacy" in q:
         return "Yes"
     if "relocate" in q or "willing to move" in q:
-        return facts.get("relocate") or "Yes"
+        return facts.get("relocate") or "Prefer Bengaluru, Hyderabad, or Chennai"
     if any(w in q for w in ("how soon", "immediate joiner", "when can you join")):
         return "Immediate"
     if any(w in q for w in ("available to join", "join immediately", "can you join immediately")):
@@ -362,7 +362,7 @@ def answer_for_question(question: str, facts: dict[str, str]) -> str:
     if "craziest" in q or "most interesting thing you" in q:
         return facts.get("best_project") or facts.get("why") or ""
     if "job position type" in q or "position type" in q:
-        return "Intern"
+        return "Full-time"
     if any(w in q for w in ("which role", "which job")) or ("job position" in q and "type" not in q):
         return facts.get("role") or ""
     if q in {"location"} or (q.startswith("location") and "prefer" not in q and "job" not in q):
@@ -373,7 +373,7 @@ def answer_for_question(question: str, facts: dict[str, str]) -> str:
         return "Yes"
     if "name of the organization" in q and "intern" in q:
         return (
-            f"{facts.get('current_company') or ''} (Trainee); Univ Technologies"
+            f"{facts.get('current_company') or ''} ({facts.get('current_role') or 'Trainee'})"
         ).strip()
     if "technologies have you worked" in q or ("which technologies" in q and "intern" in q):
         return facts.get("skills") or ""
@@ -414,13 +414,13 @@ def answer_for_question(question: str, facts: dict[str, str]) -> str:
             return facts.get("premium_group") or "SDE Premium Group"
         return facts.get("source") or "Telegram referral / SDE Premium Group"
     if "three words" in q or "3 words" in q or "describe you" in q:
-        return facts.get("three_words") or "Full-stack, curious, builder"
+        return facts.get("three_words") or "Backend, AI, builder"
     if "rate yourself" in q or ("rate" in q and ("python" in q or "sql" in q)):
         if "python" in q:
             return facts.get("python_rate") or "4"
         if "sql" in q:
             return facts.get("sql_rate") or "3"
-    if any(city in q for city in ("gurgaon", "gurugram", "pune", "noida", "bangalore", "bengaluru")):
+    if any(city in q for city in ("bangalore", "bengaluru", "hyderabad", "chennai")):
         if any(w in q for w in ("in-office", "in office", "office", "willing", "available", "work from", "relocate", "5 day", "2 month")):
             return "Yes"
     if "currently based" in q or "where are you based" in q:
@@ -432,7 +432,7 @@ def answer_for_question(question: str, facts: dict[str, str]) -> str:
     if "full stack app" in q or "fullstack app" in q or "complete fullstack" in q:
         return "Yes"
     if "strongest" in q and any(w in q for w in ("tech", "two", "2 ")):
-        return facts.get("two_techs") or "React/Next.js and Node.js/TypeScript"
+        return facts.get("two_techs") or "Python/FastAPI (backend and AI/ML) and React/Node.js"
     if "ai agent" in q:
         return "Yes"
     if "most complex" in q or "complex problem" in q:
@@ -452,17 +452,17 @@ def answer_for_question(question: str, facts: dict[str, str]) -> str:
     if "hpc" in q:
         return facts.get("hpc") or "0"
     if "job position type" in q or "position type" in q:
-        return "Intern"
+        return "Full-time"
     if "current ctc" in q or "current stipend" in q:
         return facts.get("current_ctc") or ""
     if any(w in q for w in ("expected stipend", "expected ctc", "salary expectation", "stipend expectation")):
-        if "lpa" in q:
-            return facts.get("expected_lpa") or "3-6 LPA"
-        return facts.get("expected_stipend") or facts.get("stipend") or "25000-40000/month"
+        if "stipend" in q and not any(w in q for w in ("ctc", "salary", "lpa")):
+            return facts.get("expected_stipend") or facts.get("stipend") or ""
+        return facts.get("expected_lpa") or "6+ LPA"
     if "ctc" in q and "lpa" in q:
         if "expected" in q:
-            return facts.get("expected_lpa") or "3-6 LPA"
-        return facts.get("current_ctc") or "3 LPA"
+            return facts.get("expected_lpa") or "6+ LPA"
+        return facts.get("current_ctc") or "0"
     if "shields" in q:
         return facts.get("why") or facts.get("best_project") or ""
     if "english" in q and "language" in q:
@@ -470,9 +470,9 @@ def answer_for_question(question: str, facts: dict[str, str]) -> str:
     if any(w in q for w in ("shipped to production", "which of these have you", "which internship technologies", "which tools")):
         return facts.get("skills") or ""
     if "currently studying" in q or q.startswith("graduated"):
-        return "No" if "graduated" in q else "Yes"
+        return "Yes" if "graduated" in q else "No"
     if "pursuing" in q:
-        return "Yes"
+        return "No"
     if "bond" in q or "service agreement" in q:
         return "No"
     if any(w in q for w in ("work from home", "wfh", "remote work", "hybrid")):
@@ -481,8 +481,8 @@ def answer_for_question(question: str, facts: dict[str, str]) -> str:
         return facts.get("blogs") or "No"
     if any(w in q for w in ("leetcode", "leet code", "codechef", "codeforces", "hackerrank")):
         return facts.get("leetcode") or ""
-    if "noida" in q or "willing to work from" in q:
-        return "Willing to relocate"
+    if "willing to work from" in q:
+        return facts.get("relocate") or "Prefer Bengaluru, Hyderabad, or Chennai"
     if "work from our" in q or "able to work from" in q:
         return "Yes"
     if any(w in q for w in ("proud of", "proud work", "work that you have done", "definitely check")):
@@ -515,12 +515,13 @@ def map_questions_with_gemini(
     facts: dict[str, str],
     settings: Settings,
 ) -> dict[str, str]:
-    if not settings.use_gemini or not questions or not settings.gemini_api_key:
+    from apply_bot.llm import complete_text, llm_enabled
+
+    if not llm_enabled(settings) or not questions:
         return {}
-    from google import genai
 
     payload = [{"question": q.get("title", ""), "options": q.get("options") or []} for q in questions]
-    prompt = f"""Fill an internship application form for this candidate.
+    prompt = f"""Fill a full-time job application form for this candidate.
 Return JSON only: {{ "<exact question text>": "<answer>" }}.
 If the question has options, the answer MUST be one of those option strings exactly.
 Never invent skills, companies, or numbers not in the facts.
@@ -535,11 +536,10 @@ QUESTIONS:
     try:
         from apply_bot.parse.gemini import _parse_json_object
 
-        client = genai.Client(api_key=settings.gemini_api_key)
-        response = client.models.generate_content(model=settings.gemini_model, contents=prompt)
-        data = _parse_json_object(getattr(response, "text", "") or "")
+        done = complete_text(settings, prompt)
+        data = _parse_json_object(done[1]) if done else {}
     except Exception as exc:
-        print(f"Gemini form fill failed: {exc}")
+        print(f"Form fill model failed: {exc}")
         return {}
     return {str(k): str(v) for k, v in data.items() if v not in (None, "")}
 

@@ -45,11 +45,13 @@ def decide(
 
 def format_extract_line(index: int, msg: ExtractedMessage) -> str:
     links = " | ".join(msg.hrefs) if msg.hrefs else "(none)"
+    preview_safe = msg.preview.encode('ascii', 'ignore').decode('ascii') if msg.preview else ""
+    links_safe = links.encode('ascii', 'ignore').decode('ascii')
     return (
         f"#{index}  fingerprint={msg.fingerprint}\n"
         f"    text_len={len(msg.text)}  hrefs={len(msg.hrefs)}  vision={str(msg.needs_vision).lower()}\n"
-        f"    preview={msg.preview}\n"
-        f"    links= {links}"
+        f"    preview={preview_safe}\n"
+        f"    links= {links_safe}"
     )
 
 
@@ -68,11 +70,12 @@ def deliver(
     result: FilterResult,
     settings: Settings,
     profile: Profile,
+    use_llm_email: bool = True,
 ) -> ProcessStatus:
     if result.verdict == "SKIP":
         return ProcessStatus.SKIPPED
 
-    draft = generate_draft(post, profile, result, settings)
+    draft = generate_draft(post, profile, result, settings, use_llm_email=use_llm_email)
     page = session.page
     assert page is not None
 
@@ -122,7 +125,16 @@ def job_from_row(row) -> JobPost:
     email = row["apply_email"] or None
     url = row["apply_url"] or None
     method = row["apply_method"] or classify_method(email, url, False)
-    if method not in {"email", "google_form", "careers", "email_and_form", "unknown"}:
+    if method not in {
+        "email",
+        "google_form",
+        "careers",
+        "email_and_form",
+        "naukri",
+        "wellfound",
+        "workatastartup",
+        "unknown",
+    }:
         method = classify_method(email, url, False)
     stored = ""
     try:
@@ -159,6 +171,7 @@ def retry_incomplete(
     settings: Settings,
     conn,
     profile: Profile,
+    use_llm_email: bool = True,
 ) -> None:
     parked = db.mark_stuck_skipped(conn)
     if parked:
@@ -183,7 +196,7 @@ def retry_incomplete(
         )
         if relevant and result.verdict != "SKIP":
             try:
-                status = deliver(session, post, result, settings, profile)
+                status = deliver(session, post, result, settings, profile, use_llm_email=use_llm_email)
                 from apply_bot.notify import notify
 
                 notify("Apply bot", f"retry {result.verdict} {status.value}: {post.company} {post.role}")
@@ -206,10 +219,26 @@ def process_messages(
     session: TelegramSession | None = None,
     apply: bool = False,
     profile: Profile | None = None,
+    use_llm_email: bool = True,
 ) -> None:
     profile = profile or load_profile()
     for i, msg in enumerate(messages, start=1):
         print(format_extract_line(i, msg))
+        from apply_bot.telegram.age import is_recent
+
+        recent, age = is_recent(
+            msg.posted_at,
+            msg.date_label,
+            settings.max_post_age_hours,
+            keep_undated=settings.keep_undated_posts,
+        )
+        if not recent:
+            print(f"    too old ({age:.0f}h > {settings.max_post_age_hours:.0f}h), skip" if age is not None else "    undated, skip")
+            continue
+        if age is None and settings.max_post_age_hours:
+            print("    post date unknown, kept (keep_undated_posts=true)")
+        else:
+            print(f"    age ~{age:.0f}h" if age is not None else "    age n/a")
         if apply and db.fingerprint_seen(conn, msg.fingerprint):
             print("    already seen, skip")
             continue
@@ -228,7 +257,7 @@ def process_messages(
                 print("    reached 100 applications, stop applying")
                 break
             try:
-                status = deliver(session, post, result, settings, profile)
+                status = deliver(session, post, result, settings, profile, use_llm_email=use_llm_email)
                 from apply_bot.notify import notify
 
                 notify("Apply bot", f"{result.verdict} {status.value}: {post.company} {post.role}")

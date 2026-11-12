@@ -1,4 +1,10 @@
-channel_title: "SDE Premium Group"
+channel_title: "SDE Premium Referrals 2.O"  # capital letter O, as shown in Telegram
+# Only consider Telegram posts from the last N hours (0 = no limit).
+max_post_age_hours: 336   # 14 days (2 weeks)
+# Telegram: skip posts whose minimum required experience is above this
+telegram_max_experience_years: 4
+# Keep posts whose date could not be read (true) or drop them (false).
+keep_undated_posts: true
 poll_interval_seconds: 90
 dry_run_default: true
 extract_limit: 10
@@ -9,7 +15,67 @@ chrome_profile_dir: data/chrome-profile
 auto_send_email: true
 auto_submit_forms: true
 auto_submit_careers: true
-use_gemini: false
+auto_submit_boards: true
+board_search_limit: 8
+board_poll_interval_seconds: 1800
+min_ctc_lpa: 6.0
+min_salary_usd: 7000
+# Skip listed monthly pay at or below this (₹/month). Unlisted pay is still allowed.
+min_monthly_inr: 40000
+board_cities:
+  - bengaluru
+  - hyderabad
+  - chennai
+  - gurugram
+  - mumbai
+  - pune
+  - noida
+# Prefer BLR/HYD/CHN; other metros allowed for strong companies / pan-India posts (see relevance.location loosen).
+# Naukri searches (each runs once per city in board_cities)
+board_queries:
+  - ai ml engineer
+  - backend engineer python
+  - python developer
+  - fastapi developer
+  - ai engineer
+  - genai engineer
+  - llm engineer
+  - machine learning engineer
+  - sde 1
+  - software engineer fresher
+  - full stack developer react node
+  - agentic ai engineer
+  - data engineer
+  - research engineer
+
+# --- Job boards: pacing and limits ---
+board_cards_per_search: 3      # cards taken from each query/city page
+board_max_experience_years: 4  # Naukri: skip jobs whose minimum required experience is above this (1-4 yrs ok)
+board_batch_size: 5            # max applications per run
+board_gap_seconds_min: 30      # random wait between applications
+board_gap_seconds_max: 120
+
+# --- Naukri ---
+naukri_daily_limit: 30
+naukri_experience: 1           # URL filter (fresher/1 yr); locally we reject min required experience > 4 yrs
+naukri_job_age_days: 1         # posted in the last day...
+naukri_job_age_fallback_days: 3  # ...or last 3 days if a search returns nothing
+naukri_ctc_filters: ["6to10", "10to15", "15to25", "25to50"]
+naukri_company_posted_only: true   # jobPostType=1
+naukri_sort_by_date: true          # sort=f
+naukri_profile_touch: false        # daily headline re-save (uses profile.yaml naukri_headline)
+
+# --- Wellfound ---
+wellfound_daily_limit: 15
+wellfound_roles: [backend-engineer, machine-learning-engineer, full-stack-engineer, software-engineer]
+wellfound_include_remote_india: true
+wellfound_min_lpa: 8           # jobs with no salary listed are still included
+wellfound_min_stage: series a
+wellfound_size_min: 11
+wellfound_size_max: 500
+wellfound_max_experience_years: 4   # up to 4 years
+use_gemini: true
+use_grok: true
 telegram_start_urls:
   - https://web.telegram.org/k/
   - https://web.telegram.org/a/
@@ -25,6 +91,10 @@ allow_titles:
   - software engineering intern
   - software engineer trainee
   - software developer
+  - software engineer
+  - associate software engineer
+  - python ai engineer
+  - devops engineer
   - software intern
   - backend
   - frontend
@@ -64,9 +134,19 @@ allow_titles:
   - cloud & devops
   - cloud and devops
   - devops intern
+  - research trainee
+  - product research trainee
+  - ai engineer
+  - ml engineer
+  - machine learning engineer
+  - llm engineer
+  - data engineer
+  - data analyst
 
 deny_titles:
-  - "angular"
+  - "maximo"
+  - "product manager"
+  - "service desk"
   - ".net"
   - "dotnet"
   - "swift"
@@ -77,25 +157,27 @@ deny_titles:
   - "manual qa"
   - "testing-only"
   - "sre"
-  - "research intern"
   - "site reliability"
-  - "flutter"
   - "php intern"
   - "laravel"
   - "wordpress"
-  - "spring boot"
-  - "springboot"
   - "core java"
   - "java intern"
-  - "golang"
-  - "go developer"
-  - "rust developer"
+  - "java developer"
   - "salesforce admin"
   - "salesforce developer"
   - "unity"
   - "unreal engine"
   - "vlsi"
   - "firmware"
+  - "angular"
+  - "flutter"
+  - "spring boot"
+  - "spring"
+  - "consultant"
+  - "consultancy"
+  - "sales executive"
+  - "business development"
 
 profile_stack_signals:
   - react
@@ -134,11 +216,16 @@ ai_engineer_app_signals:
   - react
   - rag
   - agent
+  - autonomous
   - fullstack
   - full stack
   - backend
   - product
   - llm
+  - python
+  - software
+  - deployment
+  - production
 
 personal_email_domains:
   - gmail.com
@@ -175,3 +262,10 @@ careers_url_markers:
   - linkedin.com/jobs
   - wellfound.com
   - lever.co
+
+# --- Local boolean filter (Naukri and Wellfound ignore OR / NOT / quotes in search; verified 17 Oct 2026) ---
+# Equivalent to: ("python" OR "fastapi" OR ...) AND ("backend" OR "ai engineer" OR ...) NOT title:(intern OR senior ...)
+board_keyword_groups:
+  - [python, fastapi, django, flask, node, node.js, react, pytorch, llm, genai, gen ai, machine learning, ml, ai, agentic, rag, chromadb, llama, websocket, sqlalchemy, rest api]
+  - [backend, back-end, back end, full stack, fullstack, full-stack, sde, software engineer, software developer, developer, ai engineer, ml engineer, machine learning engineer, llm engineer, genai engineer, engineer, data engineer, research engineer]
+board_title_excludes: [product manager, service desk, senior, sr, sr., lead, principal, staff, manager, architect, head, director, java, .net, php, android, ios, sales, qa, tester, test engineer, support, consultant, consultancy, angular, spring boot, golang, rust]
