@@ -1,0 +1,12 @@
+[
+  {
+    "company": "ExampleCorp",
+    "role_title": "AI / ML Engineer (Early Career)",
+    "job_id": "REQ-101",
+    "job_url": "https://example.com/careers/req-101",
+    "location": "Bengaluru / Remote",
+    "experience": "0-2 years",
+    "summary": "Building generative AI pipelines, LLM fine-tuning, and Python backend services."
+  }
+]
+

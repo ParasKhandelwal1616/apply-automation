@@ -1,11 +1,17 @@
+from pathlib import Path
+
 from apply_bot.apply.forms import (
     NEXT_BUTTON_PATTERNS,
     SUBMIT_BUTTON_PATTERNS,
+    _attach_resume,
     ats_kind,
     careers_confirmed,
+    is_file_upload_block,
     required_fail_reason,
     response_recorded,
+    resume_shown_on_form,
 )
+from apply_bot.config import Profile
 
 
 def test_response_recorded_google_success():
@@ -63,3 +69,63 @@ def test_ats_kind_from_url():
     assert ats_kind("https://internshala.com/internship/detail/x") == "internshala"
     assert ats_kind("https://wellfound.com/jobs/1") == "wellfound"
     assert ats_kind("https://docs.google.com/forms/d/e/x") == "google_form"
+
+
+def test_file_upload_block_and_resume_chip():
+    assert is_file_upload_block("Resume *\nAdd file\nFile upload\nPDF")
+    assert is_file_upload_block("Upload your CV\nDrag and drop or browse")
+    assert not is_file_upload_block("Full Name *\nYour answer")
+    assert resume_shown_on_form("Resume\nresume.pdf\n100 KB", "resume.pdf")
+    assert not resume_shown_on_form("Resume\nAdd file", "resume.pdf")
+
+
+class _Loc:
+    def __init__(self, page, n=0):
+        self.page, self.n = page, n
+
+    def count(self):
+        return self.n
+
+    @property
+    def first(self):
+        return self
+
+    def nth(self, _):
+        return self
+
+    def set_input_files(self, path):
+        self.page.uploaded = path
+
+    def inner_text(self, timeout=0):
+        return "Resume Add file" if self.n else ""
+
+
+class _Page:
+    def __init__(self, has_input=True, chip=True):
+        self.has_input, self.chip, self.uploaded = has_input, chip, None
+        self.frames = []
+        self.keyboard = self
+
+    def locator(self, sel):
+        if 'type="file"' in sel:
+            return _Loc(self, 1 if self.has_input else 0)
+        return _Loc(self, 0)
+
+    def inner_text(self, *_):
+        name = Path(self.uploaded).name if self.uploaded else ""
+        return f"Resume {name}" if (self.chip and name) else "Resume Add file"
+
+    def wait_for_timeout(self, _):
+        pass
+
+    def press(self, _):
+        pass
+
+
+def test_attach_resume_sets_hidden_file_input(tmp_path):
+    resume = tmp_path / "resume.pdf"
+    resume.write_bytes(b"%PDF")
+    page = _Page()
+    profile = Profile(resume_path=str(resume))
+    assert _attach_resume(page, profile) is True
+    assert page.uploaded == str(resume)

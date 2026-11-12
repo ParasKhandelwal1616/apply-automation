@@ -87,47 +87,36 @@ def _client(settings: Settings):
 
 
 def parse_with_gemini_text(text: str, fingerprint: str, settings: Settings) -> JobPost | None:
-    client = _client(settings)
-    if client is None:
-        return None
+    from apply_bot.llm import complete_text
+
     prompt = (
         "Extract a job referral posting into JSON.\n"
         f"{JSON_SCHEMA_HINT}\n\nSOURCE:\n{text}"
     )
-    try:
-        response = client.models.generate_content(model=settings.gemini_model, contents=prompt)
-    except Exception as exc:
-        print(f"Gemini text parse failed: {exc}")
+    done = complete_text(settings, prompt)
+    if not done:
         return None
-    data = _parse_json_object(getattr(response, "text", "") or "")
+    name, raw = done
+    data = _parse_json_object(raw)
     if not data:
         return None
-    return _job_from_gemini(data, text, fingerprint, "gemini_text")
+    source = "grok_text" if name == "grok" else "gemini_text"
+    return _job_from_gemini(data, text, fingerprint, source)
 
 
 def parse_with_gemini_vision(image_path: Path, fingerprint: str, settings: Settings) -> JobPost | None:
-    client = _client(settings)
-    if client is None:
-        return None
-    from google.genai import types
+    from apply_bot.llm import complete_vision
 
-    blob = image_path.read_bytes()
     prompt = "Read this Telegram job-post screenshot and extract JSON.\n" + JSON_SCHEMA_HINT
-    try:
-        response = client.models.generate_content(
-            model=settings.gemini_model,
-            contents=[
-                types.Part.from_bytes(data=blob, mime_type="image/png"),
-                prompt,
-            ],
-        )
-    except Exception as exc:
-        print(f"Gemini vision parse failed: {exc}")
+    done = complete_vision(settings, image_path.read_bytes(), prompt)
+    if not done:
         return None
-    data = _parse_json_object(getattr(response, "text", "") or "")
+    name, raw = done
+    data = _parse_json_object(raw)
     if not data:
         return None
-    return _job_from_gemini(data, f"[vision:{image_path.name}]", fingerprint, "gemini_vision")
+    source = "grok_vision" if name == "grok" else "gemini_vision"
+    return _job_from_gemini(data, f"[vision:{image_path.name}]", fingerprint, source)
 
 
 def parse_job(
@@ -139,7 +128,9 @@ def parse_job(
     needs_vision: bool = False,
 ) -> JobPost:
     regex_post = parse_job_regex(text, fingerprint, hrefs=hrefs)
-    if not settings.use_gemini or not settings.gemini_api_key:
+    from apply_bot.llm import llm_enabled
+
+    if not llm_enabled(settings):
         return regex_post
     missing_core = not regex_post.company or (
         not regex_post.apply_email and not regex_post.apply_url

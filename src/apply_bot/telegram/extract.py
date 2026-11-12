@@ -8,6 +8,7 @@ from playwright.sync_api import Locator, Page
 from apply_bot.config import Settings
 from apply_bot.models import ExtractedMessage
 from apply_bot.telegram.browser import jump_to_newest
+from apply_bot.telegram.age import post_age_hours
 
 MONTH_RE = re.compile(
     r"\b(?:today|yesterday|\d{1,2}\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*"
@@ -176,7 +177,15 @@ def _js_visible_posts(page: Page) -> list[dict]:
                 const hrefs = [...el.querySelectorAll('a[href]')]
                   .map((a) => (a.getAttribute('href') || '').trim())
                   .filter((h) => h.startsWith('http') || h.startsWith('mailto:'));
-                return { text, hrefs: [...new Set(hrefs)] };
+                const tsEl = el.closest('[data-timestamp]') || el.querySelector('[data-timestamp]');
+                const ts = tsEl ? Number(tsEl.getAttribute('data-timestamp')) : null;
+                let dateLabel = null;
+                const group = el.closest('.message-date-group, .bubbles-date-group');
+                if (group) {
+                  const head = group.querySelector('.sticky-date, .bubble-date, .service-msg, [class*="date"]');
+                  if (head) dateLabel = (head.innerText || '').trim().slice(0, 40) || null;
+                }
+                return { text, hrefs: [...new Set(hrefs)], ts: ts && ts > 1e9 ? ts : null, dateLabel };
               }).filter((x) => x.text.length > 8 || x.hrefs.length);
             }"""
         )
@@ -236,10 +245,21 @@ def _harvest_visible(
                 screenshot_path=None,
                 needs_vision=len(text.strip()) < settings.min_text_chars,
                 preview=re.sub(r"\s+", " ", text)[:160],
+                posted_at=row.get("ts") or None,
+                date_label=row.get("dateLabel") or None,
             )
         )
         added += 1
     return added
+
+
+def reached_age_limit(extracted: list[ExtractedMessage], max_hours: float | None, now=None) -> bool:
+    """True once the oldest harvested post is older than the window (we scroll newest -> oldest)."""
+    if not max_hours or max_hours <= 0 or not extracted:
+        return False
+    ages = [post_age_hours(m.posted_at, m.date_label, now) for m in extracted[-10:]]
+    ages = [a for a in ages if a is not None]
+    return bool(ages) and max(ages) > max_hours
 
 
 def extract_messages(page: Page, settings: Settings, limit: int) -> list[ExtractedMessage]:
@@ -271,6 +291,9 @@ def extract_messages(page: Page, settings: Settings, limit: int) -> list[Extract
         page.wait_for_timeout(450 if step % 3 else 900)
         added = _harvest_visible(page, settings, seen_fp, extracted, limit)
         _collect_date_labels(page, extracted, date_labels)
+        if reached_age_limit(extracted, settings.max_post_age_hours):
+            print(f"    reached posts older than {settings.max_post_age_hours:.0f}h; stop scrolling ({len(extracted)} posts)")
+            break
         if added:
             stagnant = 0
             last_len = len(extracted)
@@ -286,7 +309,7 @@ def extract_messages(page: Page, settings: Settings, limit: int) -> list[Extract
                 stagnant = 0
                 last_len = len(extracted)
                 continue
-        if stagnant >= 50:
+        if stagnant >= 80:
             break
     newest = date_labels[0] if date_labels else "?"
     oldest = date_labels[-1] if date_labels else "?"

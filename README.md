@@ -1,107 +1,127 @@
-# Apply bot (Telegram referrals → email + Google Forms)
+# Job Application & LinkedIn Referral Automation
 
-A local helper your friends can clone and run for themselves. It watches a Telegram referral channel (default: **SDE Premium Group**), extracts posts, keeps openings that match **your** profile, then:
+An end-to-end autonomous assistant to streamline job applications, candidate outreach, and referral networking across Telegram, LinkedIn, Gmail, Google Forms, and direct ATS platforms.
 
-- writes and **auto-sends** Gmail to company-domain emails
-- fills and **submits** Google Forms from your profile
-- logs everything to `data/job_tracker.xlsx`
+---
 
-Each person uses **their own** `config/profile.yaml`, Gmail, Telegram login, and resume. Nothing personal is required in the repo.
+## 🌟 Key Features
 
-## What you need
+### 1. LinkedIn Referral Outreach & Messenger
+- **Automated 1st-Degree Connection Scraping:** Extracts names, profile links, job titles, and current companies from your network.
+- **Contextual Referral Messaging:** Automatically crafts and sends personalized referral requests with your resume PDF attached directly in LinkedIn chat.
+- **Human-like Cadence & Rate Limiting:** Enforces safe delays (~30s jitter between messages) and daily caps to keep your LinkedIn account safe and avoid bot detection.
+- **Inbox Follow-up & Response Classification:**
+  - Scans conversation threads for inbound replies.
+  - Automatically classifies responses into categories (e.g. *asked for resume*, *asked for job ID / link*, *referred*, *no openings*).
+  - Matches candidate target companies against configured open positions (`data/followup_jobs.json`) to supply exact job IDs, links, and customized follow-up notes.
 
+### 2. Telegram Referral Scanner & Auto-Applier
+- Monitors Telegram referral channels (e.g., SDE Premium channels) looking back up to 14 days.
+- Extracts company names, job titles, eligibility criteria, and links.
+- Intelligently filters openings matching your experience level (0-2 years, freshers) and tech stack.
+
+### 3. Automated Gmail & Google Forms Submissions
+- **Company-Domain Gmail Dispatch:** Generates professional outreach emails tailored to hiring teams with your verified resume attached.
+- **Google Form Filler:** Seamlessly fills out complex Google Form questionnaires (personal info, education, CGPA, graduation batch, project metrics, and PDF upload).
+- **Audit Screenshots:** Captures full-page screenshots before and after form submission for complete auditability.
+
+### 4. Direct ATS Application Support
+- Automates direct job portal applications across modern ATS systems (AshbyHQ, Greenhouse, Lever, Workable).
+- Auto-populates personal background, notice period, location preferences, and uploads resume files with human verification safeguards.
+
+---
+
+## 🚀 Quick Start Guide
+
+### Prerequisites
 - Python 3.11+
-- A Telegram account that can open the channel
-- Gmail in the **same** Chromium profile the bot uses
-- Your resume PDF (and optionally a Google Drive link set to “anyone with the link”)
+- Windows PowerShell or Unix Shell
+- Google Chrome / Chromium
+- A PDF Resume (placed in `data/resume.pdf` or referenced in `config/profile.yaml`)
 
-## Setup
+### Installation
 
+1. **Clone the repository:**
+   ```bash
+   git clone <repo-url>
+   cd apply-automation-main
+   ```
+
+2. **Set up virtual environment:**
+   ```bash
+   # Windows PowerShell
+   python -m venv .venv
+   .\.venv\Scripts\Activate.ps1
+
+   # Linux / macOS
+   python3 -m venv .venv
+   source .venv/bin/activate
+   ```
+
+3. **Install dependencies & Playwright Chromium:**
+   ```bash
+   pip install -r requirements.txt
+   playwright install chromium
+   ```
+
+4. **Initialize configuration files:**
+   ```bash
+   cp .env.example .env
+   cp config/profile.example.yaml config/profile.yaml
+   cp data/followup_jobs.example.json data/followup_jobs.json
+   ```
+
+5. **Customize your profile:**
+   Edit `config/profile.yaml` with your genuine personal details:
+   - Full name, email, phone, location preferences, notice period.
+   - Education, CGPA, graduation batch.
+   - Verified technical skills, project proof points, and path to your resume PDF.
+
+---
+
+## 💻 CLI Usage
+
+All core workflows can be run using the provided PowerShell helper `run.ps1` or directly via Python module `apply_bot.cli`.
+
+### LinkedIn Automation
+
+| Task | Command | Description |
+|---|---|---|
+| **Login Session** | `.\run.ps1 linkedin-login` | Launches Chromium to log into LinkedIn and persist your local session. |
+| **Scrape Connections** | `.\run.ps1 linkedin-scrape` | Scrapes 1st-degree connections into a local contact CSV. |
+| **Referral Outreach** | `.\run.ps1 linkedin-dm` | Sends polite referral messages + attached resume PDF with safety delays. |
+| **Inbox Scanner** | `.\run.ps1 linkedin-inbox` | Quick scan of inbound replies looking for resume requests. |
+| **Follow-up Engine** | `.\run.ps1 linkedin-followup` | Categorizes replies and sends role links/IDs to connections who offered help. |
+
+### Telegram & Job Application Engine
+
+| Task | Command | Description |
+|---|---|---|
+| **Telegram Channel Login** | `.\run.ps1 open-channel` | Opens Telegram Web for one-time QR login. |
+| **Dry Run Evaluation** | `python -m apply_bot dry-run --limit 20` | Evaluates latest posts without sending emails or submitting forms. |
+| **Apply Once** | `python -m apply_bot apply-once --limit 80` | Evaluates and applies to matching openings. |
+| **Continuous Watcher** | `python -m apply_bot watch` | Runs recurring check loop every 90 seconds. |
+| **Tracker Summary** | `python -m apply_bot list` | Displays real-time status of applications and leads. |
+
+---
+
+## 🔒 Security & Privacy Best Practices
+
+- **Zero Credential Leaks:** No personal credentials, session tokens, or personal resumes are tracked by version control.
+- **Gitignored Runtime Data:** `data/chrome-profile/`, `.env`, `config/profile.yaml`, `data/*.db`, and all generated spreadsheets/CSVs are strictly ignored in `.gitignore`.
+- **Anti-Spam Throttling:** Built-in rate limits prevent aggressive messaging and protect your social profiles from platform restrictions.
+- **Never commit `config/profile.yaml` or `.env`:** Always use the `.example` templates when sharing code or committing changes.
+
+---
+
+## 🧪 Testing
+
+Run pytest test suite:
 ```bash
-git clone <this-repo-url>
-cd apply-automation
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-PLAYWRIGHT_BROWSERS_PATH="$PWD/data/pw-browsers" playwright install chromium
-cp .env.example .env
-cp config/profile.example.yaml config/profile.yaml
+pytest tests/
 ```
 
-Edit `config/profile.yaml`:
+---
 
-- name, email, phone, college, batch / graduation year
-- `resume_path` (absolute path to your PDF)
-- LinkedIn, GitHub, portfolio, Drive resume link
-- `skills` and `proof_points` (real projects with numbers)
-
-Edit `.env` only if your channel title is not `SDE Premium Group`:
-
-```bash
-TELEGRAM_CHANNEL_TITLE=SDE Premium Group
-```
-
-Optional: tune `config/settings.yaml` (allow/deny titles, auto-send). Defaults are intern / SDE / fullstack / frontend / backend / GenAI-app / DevOps intern.
-
-## First login (once)
-
-```bash
-source .venv/bin/activate
-export PLAYWRIGHT_BROWSERS_PATH="$PWD/data/pw-browsers"
-PYTHONPATH=src python -m apply_bot open-channel
-```
-
-Chromium opens [web.telegram.org](https://web.telegram.org). Scan the QR **in that window** (not your daily Chrome). Then open Gmail in the **same** window and stay signed in.
-
-The bot profile lives in `data/chrome-profile` (gitignored).
-
-## Daily use
-
-```bash
-source .venv/bin/activate
-export PLAYWRIGHT_BROWSERS_PATH="$PWD/data/pw-browsers"
-PYTHONPATH=src python -m apply_bot apply-once --limit 80
-```
-
-Or leave it polling:
-
-```bash
-PYTHONPATH=src python -m apply_bot watch
-```
-
-| Command | What it does |
-|---|---|
-| `apply-once --limit 80` | Newest posts first, apply matches, retry incomplete forms |
-| `dry-run --limit 20` | Score posts only, no mail/forms |
-| `watch` | Repeat every 90s |
-| `list` / `list --applied` | Print the tracker |
-
-Tracker files (local only): `data/job_tracker.xlsx`, `data/job_tracker.csv`, `data/applications.db`.
-
-## What the bot will and will not do
-
-- Fills name, email, phone, college, dates, resume link, and common Yes/No from **your** profile
-- Sends mail only to **company-domain** addresses; personal Gmail/yahoo stay Draft
-- Marks a Google Form submitted only when the page says the response was recorded
-- Skips login walls (Internshala, Workday, Greenhouse, etc.) unless you log in yourself in the bot Chromium
-- Does **not** invent skills, board marks, or videos
-
-If a required field has no honest answer, the run prints `ASK (...)`.
-
-## Share this with friends
-
-1. Push this repo (without `config/profile.yaml` or `.env`).
-2. Each friend clones, copies the example profile, fills **their** details, logs into Telegram + Gmail once.
-3. Never share `data/chrome-profile`, `.env`, or your filled `profile.yaml`.
-
-## Tests
-
-```bash
-PYTHONPATH=src pytest
-```
-
-You need a filled `config/profile.yaml` for tests that load the real profile.
-
-## Safety
-
-This applies **as you**. Review auto-sent mail in Gmail Sent. Keep the channel you watch one you are allowed to use. Do not commit API keys or resumes.
+## 📄 License
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.

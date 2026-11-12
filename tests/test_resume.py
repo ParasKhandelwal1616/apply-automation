@@ -4,7 +4,7 @@ from apply_bot.config import Profile, ensure_resume_copy
 
 
 def test_ensure_resume_copy_uses_no_space_path(tmp_path: Path):
-    original = tmp_path / "paras_resume_sept .pdf"
+    original = tmp_path / "sumanth_resume_sept .pdf"
     original.write_bytes(b"%PDF-1.4")
     dest_dir = tmp_path / "data"
     profile = Profile(resume_path=str(original))
@@ -15,7 +15,7 @@ def test_ensure_resume_copy_uses_no_space_path(tmp_path: Path):
 
 
 def test_ensure_resume_copy_copies_unspaced_name(tmp_path: Path):
-    original = tmp_path / "paras_resume_August.pdf"
+    original = tmp_path / "sumanth_resume_August.pdf"
     original.write_bytes(b"%PDF-august")
     dest_dir = tmp_path / "data"
     profile = Profile(resume_path=str(original))

@@ -6,8 +6,17 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 
-ParseSource = Literal["regex", "gemini_text", "gemini_vision"]
-ApplyMethod = Literal["email", "google_form", "careers", "email_and_form", "unknown"]
+ParseSource = Literal["regex", "gemini_text", "gemini_vision", "grok_text", "grok_vision"]
+ApplyMethod = Literal[
+    "email",
+    "google_form",
+    "careers",
+    "email_and_form",
+    "naukri",
+    "wellfound",
+    "workatastartup",
+    "unknown",
+]
 Verdict = Literal["SEND", "REVIEW", "SKIP"]
 
 
@@ -18,6 +27,8 @@ class ExtractedMessage(BaseModel):
     screenshot_path: str | None = None
     needs_vision: bool = False
     preview: str = ""
+    posted_at: float | None = None
+    date_label: str | None = None
 
 
 class JobPost(BaseModel):

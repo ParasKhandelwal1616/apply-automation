@@ -42,9 +42,67 @@ class Settings(BaseModel):
     auto_send_email: bool = True
     auto_submit_forms: bool = True
     auto_submit_careers: bool = True
+    auto_submit_boards: bool = True
+    board_search_limit: int = 8
+    board_poll_interval_seconds: int = 1800
+    min_ctc_lpa: float = 6.0
+    max_post_age_hours: float = 48.0
+    telegram_max_experience_years: int = 4
+    keep_undated_posts: bool = True
+    # --- job boards ---
+    board_cards_per_search: int = 3
+    board_max_experience_years: int = 4
+    board_batch_size: int = 5
+    board_gap_seconds_min: float = 30.0
+    board_gap_seconds_max: float = 120.0
+    naukri_daily_limit: int = 30
+    naukri_job_age_days: int = 1
+    naukri_job_age_fallback_days: int = 3
+    naukri_experience: int = 1
+    naukri_ctc_filters: list[str] = Field(default_factory=lambda: ["6to10", "10to15", "15to25", "25to50"])
+    naukri_company_posted_only: bool = True
+    naukri_sort_by_date: bool = True
+    naukri_profile_touch: bool = False
+    wellfound_daily_limit: int = 15
+    wellfound_roles: list[str] = Field(default_factory=lambda: [
+        "backend-engineer", "machine-learning-engineer", "full-stack-engineer", "software-engineer"])
+    wellfound_include_remote_india: bool = True
+    wellfound_min_lpa: float = 8.0
+    wellfound_min_stage: str = "series a"
+    wellfound_size_min: int = 11
+    wellfound_size_max: int = 500
+    wellfound_max_experience_years: int = 4
+    # Local boolean filter: AND across groups, OR inside a group; NOT = title_excludes
+    board_keyword_groups: list[list[str]] = Field(default_factory=lambda: [
+        ["python", "fastapi", "django", "flask", "node", "node.js", "react", "pytorch", "llm", "genai", "gen ai",
+         "machine learning", "ml", "ai", "agentic"],
+        ["backend", "back-end", "back end", "full stack", "fullstack", "full-stack", "sde", "software engineer",
+         "software developer", "developer", "ai engineer", "ml engineer", "machine learning engineer", "llm engineer",
+         "genai engineer", "engineer"],
+    ])
+    board_title_excludes: list[str] = Field(default_factory=lambda: [
+        "intern", "internship", "senior", "sr", "sr.", "lead", "principal", "staff", "manager", "architect", "head",
+        "director", "java", ".net", "php", "android", "ios", "sales", "qa", "tester", "test engineer", "support"])
+    min_salary_usd: float = 7000.0
+    min_monthly_inr: float = 40000.0
+    board_cities: list[str] = Field(
+        default_factory=lambda: ["bengaluru", "hyderabad", "chennai"]
+    )
+    board_queries: list[str] = Field(
+        default_factory=lambda: [
+            "software engineer",
+            "backend engineer",
+            "python developer",
+            "machine learning engineer",
+            "ai engineer",
+        ]
+    )
     use_gemini: bool = False
+    use_grok: bool = False
     gemini_api_key: str = ""
+    grok_api_key: str = ""
     gemini_model: str = "gemini-3.5-flash-lite"
+    grok_model: str = "grok-4"
     project_root: Path = Field(default_factory=find_project_root)
 
     def resolve(self) -> "Settings":
@@ -60,10 +118,11 @@ class Settings(BaseModel):
         if env_title:
             self.channel_title = env_title
         self.gemini_model = os.environ.get("GEMINI_MODEL", self.gemini_model).strip()
-        if self.use_gemini:
-            self.gemini_api_key = os.environ.get("GEMINI_API_KEY", "").strip()
-        else:
-            self.gemini_api_key = ""
+        self.grok_model = os.environ.get("GROK_MODEL", self.grok_model).strip()
+        self.gemini_api_key = (
+            os.environ.get("GEMINI_API_KEY", "").strip() if self.use_gemini else ""
+        )
+        self.grok_api_key = os.environ.get("GROK_API_KEY", "").strip() if self.use_grok else ""
         return self
 
 
@@ -99,7 +158,9 @@ class Profile(BaseModel):
     tenth: str = ""
     twelfth: str = ""
     current_ctc: str = ""
+    expected_ctc: str = "8 LPA"
     current_stipend: str = ""
+    naukri_headline: str = ""
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:

@@ -40,6 +40,10 @@ def stuck_reason(
         return "stuck_picker"
     if any(host in url_l for host in STUCK_HOSTS):
         return "stuck_ats"
+    if reason_l == "extra_step" and (
+        "docs.google.com/forms" in url_l or "forms.gle" in url_l
+    ):
+        return None
     if reason_l in STUCK_REASONS:
         return reason_l
     if "video" in reason_l:

@@ -4,6 +4,7 @@ import re
 
 from apply_bot.config import Profile, Settings
 from apply_bot.models import ApplicationDraft, FilterResult, JobPost
+from apply_bot.apply.llm_email import _build_hr_email, _build_minimal_email, generate_llm_email
 
 def _closing_line(profile: Profile) -> str:
     if (profile.notes or "").strip():
@@ -101,45 +102,13 @@ def _default_bullets(profile: Profile, post: JobPost) -> list[str]:
 
 
 def _template_draft(post: JobPost, profile: Profile, result: FilterResult) -> ApplicationDraft:
-    company = post.company or "your team"
-    role = post.role or "Intern"
-    subject = build_subject(post, profile, result)
-    greeting = f"Hi {company} team,"
-    stack = ", ".join(profile.skills[:3]) or "the skills in my profile"
-    hook = (
-        f"{company}'s {role} role stands out because it lines up with how I already "
-        f"build and ship: {stack}."
-    )
     if _skip_cover(post.raw_text or ""):
-        body = (
-            f"{greeting}\n\n"
-            f"Please find my resume for the {role} role ({profile.batch or profile.graduation_year or 'current'} batch), as requested.\n\n"
-            + _signature(profile).replace("{company}", company)
-        )
-    else:
-        bullets = "\n\n".join(_default_bullets(profile, post))
-        body = (
-            f"{greeting}\n\n"
-            f"{hook}\n\n"
-            f"My background matches what you're looking for:\n\n"
-            f"{bullets}\n\n"
-            f"{_closing_line(profile)}\n\n"
-            + _signature(profile).replace("{company}", company)
-        )
-    answers = {
-        "name": profile.full_name,
-        "email": profile.email,
-        "phone": profile.phone,
-        "college": profile.college,
-        "batch": profile.batch,
-        "role": role,
-        "resume": profile.resume_drive or "",
-    }
-    return ApplicationDraft(subject=subject, body=body, form_answers=answers)
+        return _build_minimal_email(profile, post)
+    return _build_hr_email(profile, post)
 
 
 def _gemini_prompt(post: JobPost, profile: Profile, result: FilterResult) -> str:
-    return f"""Write one internship application email that follows this EXACT structure.
+    return f"""Write one full-time job application email that follows this EXACT structure.
 
 SUBJECT:
 - Default: Application for [Exact Role Title] — {profile.full_name}
@@ -189,22 +158,28 @@ def generate_draft(
     profile: Profile,
     result: FilterResult,
     settings: Settings,
+    use_llm_email: bool = True,
 ) -> ApplicationDraft:
+    if use_llm_email:
+        draft, source, problems = generate_llm_email(post, profile, result, settings)
+        print(f"Email source: {source}")
+        if problems:
+            print(f"Email problems: {problems}")
+        return draft
+
     fallback = _template_draft(post, profile, result)
-    if not settings.use_gemini or not settings.gemini_api_key:
+    from apply_bot.llm import complete_text, llm_enabled
+
+    if not llm_enabled(settings):
         return fallback
 
-    from google import genai
-
-    client = genai.Client(api_key=settings.gemini_api_key)
     try:
-        response = client.models.generate_content(
-            model=settings.gemini_model,
-            contents=_gemini_prompt(post, profile, result),
-        )
+        done = complete_text(settings, _gemini_prompt(post, profile, result))
+        if not done:
+            return fallback
         from apply_bot.parse.gemini import _parse_json_object
 
-        data = _parse_json_object(getattr(response, "text", "") or "")
+        data = _parse_json_object(done[1])
         if data.get("subject") and data.get("body"):
             answers = data.get("form_answers") or {}
             if not isinstance(answers, dict):
